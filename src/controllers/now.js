@@ -3,13 +3,20 @@
 const debug = require('debug')('uwave:http-api:now');
 const _ = require('lodash');
 const { getBoothData } = require('./booth');
-const { serializePlaylist } = require('../utils/serialize');
+const {
+  serializePlaylist,
+  serializeUser,
+} = require('../utils/serialize');
 
+/**
+ * @param {import('../Uwave')} uw
+ * @param {Promise<import('../models').Playlist | null>} activePlaylist
+ */
 async function getFirstItem(uw, activePlaylist) {
   try {
     const playlist = await activePlaylist;
     if (playlist && playlist.size > 0) {
-      const item = await uw.playlists.getPlaylistItem(playlist.media[0]);
+      const item = await uw.playlists.getPlaylistItem(playlist, playlist.media[0]);
       return item;
     }
   } catch (e) {
@@ -18,12 +25,18 @@ async function getFirstItem(uw, activePlaylist) {
   return null;
 }
 
+/**
+ * @param {unknown} str
+ */
 function toInt(str) {
   if (typeof str !== 'string') return 0;
   if (!/^\d+$/.test(str)) return 0;
   return parseInt(str, 10);
 }
 
+/**
+ * @param {import('../Uwave')} uw
+ */
 async function getOnlineUsers(uw) {
   const { User } = uw.models;
 
@@ -39,14 +52,20 @@ async function getOnlineUsers(uw) {
     })
     .lean();
 
-  return users;
+  return users.map(serializeUser);
 }
 
+/**
+ * @param {import('../Uwave')} uw
+ */
 async function getGuestsCount(uw) {
   const guests = await uw.redis.get('http-api:guests');
   return toInt(guests);
 }
 
+/**
+ * @type {import('../types').Controller}
+ */
 async function getState(req) {
   const uw = req.uwave;
   const { authRegistry } = req.uwaveHttp;
@@ -85,17 +104,9 @@ async function getState(req) {
       });
   }
 
-  // Delete unnecessary properties to avoid sending them for no reason
-  let cleanUser = {};
-  if (user !== undefined) {
-    cleanUser = _.omit(user.toObject(), ['expDispenseCycles', 'lastExpDispense']);
-  } else {
-    cleanUser = user;
-  }
-
   const stateShape = {
     motd,
-    user: cleanUser,
+    user: user ? serializeUser(user) : null,
     users,
     guests,
     roles,
