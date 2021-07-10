@@ -41,11 +41,12 @@ async function getOnlineUsers(uw) {
   const { User } = uw.models;
 
   const userIDs = await uw.redis.lrange('users', 0, -1);
+  /** @type {Omit<import('../models/User').LeanUser, 'activePlaylist' | 'exiled' | 'level'>[]} */
   const users = await User.find({ _id: { $in: userIDs } })
     .select({
       activePlaylist: 0,
       exiled: 0,
-      updatedAt: 0,
+      level: 0,
       __v: 0,
       expDispenseCycles: 0,
       lastExpDispense: 0,
@@ -122,7 +123,12 @@ async function getState(req) {
   };
 
   const stateKeys = Object.keys(stateShape);
-  const stateValues = await Promise.all(Object.values(stateShape));
+  // This is a little dirty but maintaining the exact type shape is very hard here.
+  // We could solve that in the future by using a `p-props` style function. The npm
+  // module `p-props` is a bit wasteful though.
+  /** @type {any} */
+  const values = Object.values(stateShape);
+  const stateValues = await Promise.all(values);
 
   const state = Object.create(null);
   for (let i = 0; i < stateKeys.length; i += 1) {
