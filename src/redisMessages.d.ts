@@ -113,9 +113,23 @@ export type ServerActionParameters = {
     duration: number | null,
     expiresAt: number | null,
   },
+  'user:play': {
+    userID: string,
+    artist: string,
+    title: string
+  },
   'user:unban': {
     userID: string,
     moderatorID: string,
+  },
+  'user:levelup': {
+    userID: string,
+    level: number,
+  },
+  'user:gain': {
+    userID: string,
+    exp: number,
+    points: number,
   },
   'http-api:socket:close': string,
 };

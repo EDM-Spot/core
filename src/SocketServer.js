@@ -387,7 +387,7 @@ class SocketServer {
           const user = await users.getUser(userID);
 
           this.broadcast('play', {
-            user: user.toJSON(),
+            user: serializeUser(user),
             song: `${artist} - ${title}`,
           });
         }
